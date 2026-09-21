@@ -1080,3 +1080,51 @@ cursor when scrolling.
 The Esc case of `tests/e2e/omnibar.sh` still passes over a static page, so some
 other path repaints after the key; which one was not traced. If that path goes
 away, the popup would linger until the next unrelated redraw.
+
+## 24. Windows: UI thread hangs right after the first frame (2026-09-21)
+
+### HIGH — buffr 0.14.17 never becomes usable on a Windows 11 desktop
+
+**Seen:** `buffr` from the kryptic-sh scoop bucket, Windows 11 Pro, AMD Radeon
+RX 7900 XTX (driver 25.10.36), wgpu on the Vulkan backend, built-in default
+config, empty profile. Every launch hangs the same way and the supervisor gives
+up after three:
+
+1. The child starts, CEF initializes, the initial tab is created in OSR mode,
+   wgpu picks the adapter and `composite_alpha=Opaque` (`buffr_app::render`),
+   and the window gets focus.
+2. About 5 s after that, `buffr_app::heartbeat::inner` reports "UI thread silent
+   for >5s" (staleness 5099–5598 ms) and withholds pings.
+3. At 8 s the supervisor (`apps/buffr/src/main.rs`, `windows` module) kills the
+   child, restarts it after 250 ms, and on the third hang within 30 s logs
+   "refusing to restart" and exits 1. `buffr_app::crash_guard` flags the crash
+   loop on attempt 3.
+
+Timings from the first launch: the heartbeat pipe connected 11.5 s after the
+child spawned (suspended at 10:56:22.35, connected at 10:56:33.91); the restarts
+connected within 15 ms. The last log line before each hang is the wgpu surface
+setup or the first `WindowEvent::Focused`. CEF also logged
+`AMD VideoProcessorGetOutputExtension failed` (DirectComposition) and a USB
+`SetupDiGetDeviceProperty` error at every start; neither is known to be related.
+
+**Not known:** where the UI thread is blocked. The supervisor does not capture
+the child's stderr (its own message says so), and nobody has run the app outside
+it yet. Next steps, in order:
+
+- `$env:RUST_LOG="debug"; buffr-app 2>buffr-app.log` straight from a PowerShell
+  prompt, to get the log past the last `info` line.
+- `buffr --heartbeat-disable` to tell a true deadlock from a UI thread that is
+  only slow to come back (e.g. a long first present).
+- Try another wgpu backend to see whether the hang follows Vulkan on this
+  driver. There is no switch for that today: `render.rs` creates the instance
+  with `wgpu::Backends::all()` and does not read `WGPU_BACKEND`, so this needs a
+  build that honours it (wgpu's `Backends::from_env`) or forces DX12.
+
+Guess, unverified: the UI thread blocking in `surface.get_current_texture()`.
+Per the `render.rs` module docs that acquire is the one wgpu call left on the UI
+thread (submit and present run on the "wgpu-render" worker), and the hang starts
+right after surface configuration. A swapchain image that the Vulkan driver
+never releases would block exactly there.
+
+Relates to §2 (no `cargo test` on Windows; the Windows supervisor paths only run
+in the field) and §11 item 6 (the Windows heartbeat pipe thread).
