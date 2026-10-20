@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Homebrew cask's `depends_on macos:` uses `:ventura`** instead of the
+  `">= :ventura"` string form, which Homebrew 7 deprecates and warns about
+  whenever the tap loads.
+
 ## [0.14.17] - 2026-09-15
 
 ### Fixed
