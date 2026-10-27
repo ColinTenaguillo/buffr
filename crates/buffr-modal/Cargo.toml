@@ -36,8 +36,8 @@ serde = { version = "1", features = ["derive"] }
 bitflags = "2"
 
 # Edit-mode delegates to hjkl-engine against a mirrored Rope synced to
-# the DOM via CEF. Bumped to 0.41 — hjkl-engine no longer ships the vim
-# FSM (feed_input / vim_mode moved to hjkl-vim, installed via
+# the DOM via CEF. Since 0.41 hjkl-engine no longer ships the vim FSM
+# (feed_input / vim_mode moved to hjkl-vim, installed via
 # install_vim_discipline).
 hjkl-engine.workspace = true
 hjkl-buffer.workspace = true
