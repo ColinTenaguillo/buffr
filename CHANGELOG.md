@@ -16,12 +16,16 @@ and this project adheres to
 
 ### Security
 
+- Updated `rustls-webpki` 0.103.15 → 0.103.16 for RUSTSEC-2026-0382 and
+  `webpki-roots` 1.0.9 → 1.0.11 for RUSTSEC-2026-0381, which stop trusting
+  certificate paths through distrusted emSign intermediates and drop the emSign
+  ECC Root CA - G3. `webpki-roots` is `ureq`'s root store, behind update checks,
+  view-source and image copy.
 - Updated `rustls` to 0.23.46 (via `ureq`, the HTTP client behind update checks,
-  view-source and image copy), closing
-  RUSTSEC-2026-0346, RUSTSEC-2026-0347, RUSTSEC-2026-0348 and RUSTSEC-2026-0349:
-  TLS secrets in `Debug` output, data sent after an ECH rejection, 1 GiB Brotli
-  certificate decompression before authentication, and a ServerHello downgrade
-  to classical key exchange.
+  view-source and image copy), closing RUSTSEC-2026-0346, RUSTSEC-2026-0347,
+  RUSTSEC-2026-0348 and RUSTSEC-2026-0349: TLS secrets in `Debug` output, data
+  sent after an ECH rejection, 1 GiB Brotli certificate decompression before
+  authentication, and a ServerHello downgrade to classical key exchange.
 - Dropped the unused `zbus` dependency from `buffr-core` and `buffr-cef` (no
   code called it), which also clears RUSTSEC-2026-0370, RUSTSEC-2026-0371 and
   RUSTSEC-2026-0372: `zvariant`, `zbus_names` and `zvariant_derive` are no
