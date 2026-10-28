@@ -159,6 +159,20 @@ pub fn cef_initialize(cache_path: &str, app: &mut cef::App) -> Result<(), String
     #[cfg(target_os = "macos")]
     {
         settings.external_message_pump = 1;
+        // Inside the bundle CEF derives the helper name from the main
+        // executable (`buffr-app Helper.app`), which does not exist —
+        // the bundler ships `Buffr Helper.app`. Point CEF at it.
+        if let Ok(exe) = std::env::current_exe()
+            && exe.components().any(|c| c.as_os_str() == "Contents")
+            && let Some(bundle) = exe.ancestors().nth(3)
+        {
+            let helper =
+                bundle.join("Contents/Frameworks/Buffr Helper.app/Contents/MacOS/Buffr Helper");
+            if helper.is_file() {
+                settings.browser_subprocess_path =
+                    cef::CefString::from(helper.to_string_lossy().as_ref());
+            }
+        }
         // Inside a real .app bundle the path already contains "Contents";
         // skip the cargo-run framework override.
         if let Ok(exe) = std::env::current_exe()
@@ -229,6 +243,18 @@ pub fn delete_all_cookies() {
 /// On **Linux / Windows** CEF links dynamically through `build.rs` so
 /// this function is a no-op (returns `Ok(())`).
 ///
+/// macOS: initialise the Chromium sandbox in a helper process. Must run
+/// before the framework is loaded; the returned context has to stay
+/// alive until the process exits. Sandboxed helpers (renderer, GPU,
+/// network) CHECK-fail at startup without it.
+#[cfg(target_os = "macos")]
+pub fn init_helper_sandbox() -> cef::sandbox::Sandbox {
+    let args = cef::args::Args::new();
+    let mut sandbox = cef::sandbox::Sandbox::new();
+    sandbox.initialize(args.as_main_args());
+    sandbox
+}
+
 /// # Errors
 ///
 /// Returns an error string when the macOS loader reports failure.

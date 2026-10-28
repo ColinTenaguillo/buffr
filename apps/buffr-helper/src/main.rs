@@ -41,6 +41,10 @@ fn main() {
         eprintln!("buffr-helper: engine_id={id}");
     }
 
+    // macOS: the sandbox must be initialised before the framework loads.
+    #[cfg(target_os = "macos")]
+    let _sandbox = buffr_cef::init_helper_sandbox();
+
     // Load the CEF framework library before any CEF call. On macOS this
     // resolves `Chromium Embedded Framework.framework` via `../../..`
     // (helper = true). On Linux/Windows this is a no-op.

@@ -17,6 +17,14 @@ and this project adheres to
 
 ### Fixed
 
+- **macOS: sandboxed subprocesses never started from the `.app` bundle.** CEF
+  derives the helper bundle name from the main executable (`buffr-app Helper.app`)
+  while the bundler ships `Buffr Helper.app`, so GPU, network and renderer
+  launches failed with `Sandbox setup failed`; `cef_initialize` now points
+  `browser_subprocess_path` at the bundled helper. `buffr-helper` also never
+  called `cef_sandbox_initialize` before loading the framework, which has been
+  required since the renderer sandbox was enabled, so every sandboxed helper
+  CHECK-failed at startup; the helper now initialises the sandbox first.
 - **The Homebrew cask's `depends_on macos:` uses `:ventura`** instead of the
   `">= :ventura"` string form, which Homebrew 7 deprecates and warns about
   whenever the tap loads.
